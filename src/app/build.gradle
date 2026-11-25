@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ICU 统一签名：debug 与 release 共用同一张证书，
+// 保证 Studio 直接 Run 出来的包可以覆盖安装到已装正式包的设备上（避免 INSTALL_FAILED_UPDATE_INCOMPATIBLE）。
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withReader('UTF-8') { keystoreProps.load(it) }
+}
+def icuKeystoreFile = keystoreProps.getProperty('storeFile')
+        ? file(keystoreProps.getProperty('storeFile'))
+        : new File(System.getProperty('user.home'), '.android/icu-release.jks')
+def hasIcuKeystore = icuKeystoreFile.exists()
+def requiredKeystoreProp = { key ->
+    def value = keystoreProps.getProperty(key)
+    if (!value) {
+        throw new GradleException("Missing keystore.properties entry: ${key}")
+    }
+    return value
+}
+
+android {
+    namespace 'com.example.icuapk'
+    compileSdkVersion 'android-36.1'
+
+    defaultConfig {
+        applicationId 'com.example.icuapk'
+        minSdk 24
+        // Android 12 起蓝牙走"附近设备"权限模型：扫描结果不再依赖位置权限与系统定位开关。
+        // neverForLocation 标记只有 targetSdk >= 31 才会生效，所以这里必须跟到 34。
+        // 本项目没有 PendingIntent、前台服务、通知，升级 targetSdk 不会带来额外的兼容负担。
+        targetSdk 34
+        versionCode 20
+        versionName '2.6.1-env-care-fix'
+    }
+
+    signingConfigs {
+        icu {
+            if (hasIcuKeystore) {
+                storeFile icuKeystoreFile
+                storePassword requiredKeystoreProp('storePassword')
+                keyAlias keystoreProps.getProperty('keyAlias', 'icu')
+                keyPassword requiredKeystoreProp('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (hasIcuKeystore) {
+                signingConfig signingConfigs.icu
+            }
+        }
+        release {
+            if (hasIcuKeystore) {
+                signingConfig signingConfigs.icu
+            }
+        }
+    }
+
+    lint {
+        disable 'ExpiredTargetSdkVersion'
+    }
+}
+
+dependencies {
+    implementation 'androidx.annotation:annotation:1.6.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

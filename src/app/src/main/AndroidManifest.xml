@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <!-- 位置权限只对 Android 11 及以下有意义：
+         Android 12 起蓝牙扫描改由「附近设备」权限接管，清单里 BLUETOOTH_SCAN
+         已经声明了 neverForLocation，系统不会再按位置过滤扫描结果。
+         如果在 Android 12+ 仍然声明位置权限，系统可能继续要求用户打开系统
+         定位开关，表现就是「同一台平板换个环境一个蓝牙设备都扫不到」。
+         所以用 maxSdkVersion 在 Android 12 起把位置权限掐断。 -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- 局域网打印机扫描走 mDNS，需要持有组播锁才能收到打印机的应答 -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- 蓝牙扫描权限：声明 neverForLocation。
+         Android 12 起，只有带这个标记的 App 才不会被系统按"位置"过滤扫描结果，
+         也就不会再要求"位置信息"授权和系统定位开关必须打开。
+         本 App 只用蓝牙连设备，不做位置推算，声明它是安全的。 -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- 使用教程页要读取本机相册里的图片和视频 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- 旧版存储读取权限在 Android 13 以上能拿到整库访问，不能加 maxSdkVersion 限制 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 使用教程页要能枚举本机文档（PDF、Word 等），Android 11 之后需要所有文件访问权限 -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_app_icon"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".CameraStreamActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- 摄像监控页的截图和录像存在应用私有目录，网页通过这个提供器读取缩略图 -->
+        <provider
+            android:name=".CameraFileProvider"
+            android:authorities="com.example.icuapk.camera"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+        <!-- 教程文档可能直接来自下载目录，交给系统应用打开时需要 content:// 地址 -->
+        <provider
+            android:name=".TutorialFileProvider"
+            android:authorities="com.example.icuapk.tutorial"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+
+</manifest>
